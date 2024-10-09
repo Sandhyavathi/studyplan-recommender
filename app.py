@@ -59,7 +59,7 @@ def generate_recommendations(student_id, score, answers):
              f"The student's answers were: {answers}. Provide tailored study resources and strategies."
 
     try:
-        # Call the OpenAI GPT API
+        # Call the OpenAI GPT API using the new format
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",  # Use gpt-4 if you have access and prefer it
             messages=[
