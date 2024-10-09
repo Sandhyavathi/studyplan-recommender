@@ -13,6 +13,10 @@ db = client.education_system
 # OpenAI API key from environment variable
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 
+@app.route('/')
+def home():
+    return "Flask server is running!"
+
 @app.route('/process', methods=['POST'])
 def process_data():
     data = request.json
