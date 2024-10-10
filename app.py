@@ -54,20 +54,15 @@ def generate_study_plan(score):
         return "Advanced Study Plan."
 
 def generate_recommendations(student_id, score, answers):
-    # Create a prompt for GPT based on the student's performance
-    prompt = f"Generate study recommendations for student {student_id} who scored {score}. " \
-             f"The student's answers were: {answers}. Provide tailored study resources and strategies."
+    prompt = f"Generate study recommendations for student {student_id} who scored {score}. The student's answers were: {answers}. Provide tailored study resources and strategies."
 
     try:
-        # Call the OpenAI GPT API using the new format
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Use gpt-4 if you have access and prefer it
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+        response = openai.Completion.create(
+            model="gpt-3.5-turbo",
+            prompt=prompt,
+            max_tokens=150
         )
-        # Extract the recommendations from the response
-        recommendations = response['choices'][0]['message']['content']
+        recommendations = response.choices[0].text.strip()
         return recommendations
     except Exception as e:
         return f"Error generating recommendations: {str(e)}"
