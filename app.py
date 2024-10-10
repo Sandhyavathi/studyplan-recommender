@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
-import openai
 import os
+from transformers import pipeline
 
 app = Flask(__name__)
 
@@ -10,8 +10,8 @@ mongodb_uri = os.environ.get('MONGODB_URI')
 client = MongoClient(mongodb_uri)
 db = client.education_system
 
-# OpenAI API key
-openai.api_key = os.environ.get('OPENAI_API_KEY')
+# Load Hugging Face text generation model
+generator = pipeline('text-generation', model='gpt2')
 
 @app.route('/')
 def home():
@@ -27,7 +27,7 @@ def process_data():
     # Logic to generate a study plan based on the score
     study_plan = generate_study_plan(score)
 
-    # Generate recommendations from GPT
+    # Generate recommendations from Hugging Face
     recommendations = generate_recommendations(student_id, score, answers)
 
     # Store in MongoDB
@@ -57,14 +57,8 @@ def generate_recommendations(student_id, score, answers):
     prompt = f"Generate study recommendations for student {student_id} who scored {score}. The student's answers were: {answers}. Provide tailored study resources and strategies."
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        recommendations = response['choices'][0]['message']['content'].strip()
+        response = generator(prompt, max_length=150, num_return_sequences=1)
+        recommendations = response[0]['generated_text'].strip()
         return recommendations
     except Exception as e:
         return f"Error generating recommendations: {str(e)}"
