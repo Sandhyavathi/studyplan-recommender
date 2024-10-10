@@ -57,13 +57,13 @@ def generate_recommendations(student_id, score, answers):
     prompt = f"Generate study recommendations for student {student_id} who scored {score}. The student's answers were: {answers}. Provide tailored study resources and strategies."
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=prompt,
+            max_tokens=150,
+            temperature=0.7
         )
-        recommendations = response['choices'][0]['message']['content']
+        recommendations = response.choices[0].text.strip()
         return recommendations
     except Exception as e:
         return f"Error generating recommendations: {str(e)}"
