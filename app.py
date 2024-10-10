@@ -61,7 +61,7 @@ def generate_recommendations(student_id, score, answers):
     try:
         # Call the OpenAI GPT API using the new format
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  
+            model="gpt-3.5-turbo",  # Use gpt-4 if you have access and prefer it
             messages=[
                 {"role": "user", "content": prompt}
             ]
@@ -71,6 +71,7 @@ def generate_recommendations(student_id, score, answers):
         return recommendations
     except Exception as e:
         return f"Error generating recommendations: {str(e)}"
+
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
