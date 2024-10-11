@@ -1,17 +1,16 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
-import os
 from transformers import pipeline
+import os
 
 app = Flask(__name__)
 
-# MongoDB connection
-mongodb_uri = os.environ.get('MONGODB_URI')
-client = MongoClient(mongodb_uri)
-db = client.education_system
+# MongoDB setup
+client = MongoClient('mongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
+db = client['education_system']
 
-# Load Hugging Face text generation model
-generator = pipeline('text-generation', model='gpt2')
+# Hugging Face model setup
+generator = pipeline("text-generation", model="gpt2")  # Use GPT-2 for study plan generation
 
 @app.route('/')
 def home():
@@ -24,45 +23,23 @@ def process_data():
     score = data.get('score')
     answers = data.get('answers')
 
-    # Logic to generate a study plan based on the score
-    study_plan = generate_study_plan(score)
+    # Generate a study plan based on the student's score
+    study_plan = generate_study_plan(score, answers)
 
-    # Generate recommendations from Hugging Face
-    recommendations = generate_recommendations(student_id, score, answers)
-
-    # Store in MongoDB
+    # Store data in MongoDB
     db.student_data.insert_one({
         'student_id': student_id,
         'score': score,
         'answers': answers,
-        'study_plan': study_plan,
-        'recommendations': recommendations
+        'study_plan': study_plan
     })
 
-    return jsonify({
-        'message': 'Data processed successfully',
-        'study_plan': study_plan,
-        'recommendations': recommendations
-    }), 200
+    return jsonify({'message': 'Data processed successfully', 'study_plan': study_plan}), 200
 
-def generate_study_plan(score):
-    if score < 50:
-        return "Beginner Study Plan."
-    elif score < 75:
-        return "Intermediate Study Plan."
-    else:
-        return "Advanced Study Plan."
-
-def generate_recommendations(student_id, score, answers):
-    prompt = f"Generate study recommendations for student {student_id} who scored {score}. The student's answers were: {answers}. Provide tailored study resources and strategies."
-
-    try:
-        response = generator(prompt, max_length=150, num_return_sequences=1)
-        recommendations = response[0]['generated_text'].strip()
-        return recommendations
-    except Exception as e:
-        return f"Error generating recommendations: {str(e)}"
-
+def generate_study_plan(score, answers):
+    prompt = f"Generate a study plan for a student who scored {score}. The student's answers were: {answers}."
+    generated = generator(prompt, max_length=100, num_return_sequences=1)[0]['generated_text']
+    return generated
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
