@@ -8,12 +8,12 @@ app = Flask(__name__)
 CORS(app) 
 
 # MongoDB connection
-mongodb_uri = os.environ.get('ongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
+mongodb_uri = os.environ.get('mongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
 client = MongoClient(mongodb_uri)
 db = client.education_system
 
 # Load the Hugging Face model for text generation
-generator = pipeline("text-generation", model="gpt2")  # Change to your preferred model
+generator = pipeline("text-generation", model="distilgpt2")# Change to your preferred model
 
 @app.route('/')
 def home():
