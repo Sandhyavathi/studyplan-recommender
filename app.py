@@ -1,18 +1,19 @@
+import os
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
-from flask_cors import CORS
 from transformers import pipeline
-import os
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app) 
 
-# MongoDB setup
-client = MongoClient('mongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
-db = client['education_system']
+# MongoDB connection
+mongodb_uri = os.environ.get('ongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
+client = MongoClient(mongodb_uri)
+db = client.education_system
 
-# Hugging Face model setup
-generator = pipeline("text-generation", model="gpt2")  # Use GPT-2 for study plan generation
+# Load the Hugging Face model for text generation
+generator = pipeline("text-generation", model="gpt2")  # Change to your preferred model
 
 @app.route('/')
 def home():
@@ -25,23 +26,31 @@ def process_data():
     score = data.get('score')
     answers = data.get('answers')
 
-    # Generate a study plan based on the student's score
-    study_plan = generate_study_plan(score, answers)
+    # Logic to generate a study plan based on the score
+    study_plan = generate_study_plan(score)
 
-    # Store data in MongoDB
+    # Generate recommendations using Hugging Face model
+    recommendations = generator(f"Generate a study plan for a student who scored {score}. The student's answers were: {answers}.", max_length=50)
+
+    # Store in MongoDB
     db.student_data.insert_one({
         'student_id': student_id,
         'score': score,
         'answers': answers,
-        'study_plan': study_plan
+        'study_plan': study_plan,
+        'recommendations': recommendations[0]['generated_text']
     })
 
-    return jsonify({'message': 'Data processed successfully', 'study_plan': study_plan}), 200
+    return jsonify({'message': 'Data processed successfully', 'study_plan': study_plan, 'recommendations': recommendations[0]['generated_text']}), 200
 
-def generate_study_plan(score, answers):
-    prompt = f"Generate a study plan for a student who scored {score}. The student's answers were: {answers}."
-    generated = generator(prompt, max_length=100, num_return_sequences=1)[0]['generated_text']
-    return generated
+def generate_study_plan(score):
+    if score < 50:
+        return "Beginner Study Plan."
+    elif score < 75:
+        return "Intermediate Study Plan."
+    else:
+        return "Advanced Study Plan."
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
