@@ -1,23 +1,21 @@
-import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
 from transformers import pipeline
+import os
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
+# MongoDB setup
+client = MongoClient('mongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
+db = client['education_system']
 
-# MongoDB connection
-mongodb_uri = os.environ.get('mongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
-client = MongoClient(mongodb_uri)
-db = client.education_system
-
-# Load the Hugging Face model for text generation
-generator = pipeline("text-generation", model="distilgpt2")# Change to your preferred model
+# Hugging Face model setup
+generator = pipeline("text-generation", model="gpt2")  # Use GPT-2 for study plan generation
 
 @app.route('/')
 def home():
-    return "Flask server is running!"
+    return render_template('index.html')
 
 @app.route('/process', methods=['POST'])
 def process_data():
@@ -26,31 +24,28 @@ def process_data():
     score = data.get('score')
     answers = data.get('answers')
 
-    # Logic to generate a study plan based on the score
-    study_plan = generate_study_plan(score)
+    # Generate study plan based on the score and answers
+    study_plan = generate_study_plan(score, answers)
 
-    # Generate recommendations using Hugging Face model
-    recommendations = generator(f"Generate a study plan for a student who scored {score}. The student's answers were: {answers}.", max_length=50)
-
-    # Store in MongoDB
+    # Save data to MongoDB (optional)
     db.student_data.insert_one({
         'student_id': student_id,
         'score': score,
         'answers': answers,
-        'study_plan': study_plan,
-        'recommendations': recommendations[0]['generated_text']
+        'study_plan': study_plan
     })
 
-    return jsonify({'message': 'Data processed successfully', 'study_plan': study_plan, 'recommendations': recommendations[0]['generated_text']}), 200
+    return jsonify({'message': 'Data processed successfully', 'study_plan': study_plan}), 200
 
-def generate_study_plan(score):
-    if score < 50:
-        return "Beginner Study Plan."
-    elif score < 75:
-        return "Intermediate Study Plan."
-    else:
-        return "Advanced Study Plan."
+@app.route('/get_study_plans', methods=['GET'])
+def get_study_plans():
+    plans = list(db.student_data.find({}, {'_id': 0}))  # Exclude the MongoDB ID
+    return jsonify(plans), 200
+
+def generate_study_plan(score, answers):
+    prompt = f"Generate a study plan for a student who scored {score}. The student's answers were: {answers}."
+    generated = generator(prompt, max_length=100, num_return_sequences=1)[0]['generated_text']
+    return generated
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(port=5000, debug=True)
