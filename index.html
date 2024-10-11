@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Plan Generator</title>
+</head>
+<body>
+    <h1>Study Plan Generator</h1>
+    
+    <h2>Submit Your Quiz Data</h2>
+    <form id="quiz-form">
+        <label for="student_id">Student ID:</label>
+        <input type="number" id="student_id" required><br><br>
+        
+        <label for="score">Score:</label>
+        <input type="number" id="score" required><br><br>
+        
+        <label for="answers">Answers (comma-separated):</label>
+        <input type="text" id="answers" required><br><br>
+        
+        <button type="submit">Submit</button>
+    </form>
+
+    <h2>Fetch Study Plans</h2>
+    <button id="fetch-plans">Fetch Study Plans</button>
+    <div id="plans"></div>
+
+    <script>
+        document.getElementById('quiz-form').addEventListener('submit', function(event) {
+            event.preventDefault();  // Prevent the form from submitting normally
+            
+            const student_id = document.getElementById('student_id').value;
+            const score = document.getElementById('score').value;
+            const answers = document.getElementById('answers').value.split(',').map(answer => answer.trim());
+
+            fetch('/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ student_id, score, answers })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Data processed successfully: ' + data.study_plan);
+            })
+            .catch(error => console.error('Error processing data:', error));
+        });
+
+        document.getElementById('fetch-plans').addEventListener('click', function() {
+            fetch('/get_study_plans')
+                .then(response => response.json())
+                .then(data => {
+                    const plansDiv = document.getElementById('plans');
+                    plansDiv.innerHTML = '';  // Clear previous plans
+                    data.forEach(plan => {
+                        const planElement = document.createElement('div');
+                        planElement.innerText = `Student ID: ${plan.student_id}, Score: ${plan.score}, Study Plan: ${plan.study_plan}`;
+                        plansDiv.appendChild(planElement);
+                    });
+                })
+                .catch(error => console.error('Error fetching plans:', error));
+        });
+    </script>
+</body>
+</html>
