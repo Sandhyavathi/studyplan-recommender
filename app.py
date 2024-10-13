@@ -1,21 +1,21 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from pymongo import MongoClient
-from transformers import pipeline
+import requests
 import os
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
-# MongoDB setup
-client = MongoClient('mongodb+srv://sandhyavathi890:5DaeGniGuyjO0JKw@cluster0.lso1n.mongodb.net/education_system?retryWrites=true&w=majority')
-db = client['education_system']
 
-# Hugging Face model setup
-generator = pipeline("text-generation", model="gpt2")  # Use GPT-2 for study plan generation
+# MongoDB connection
+mongodb_uri = os.environ.get('MONGODB_URI')
+client = MongoClient(mongodb_uri)
+db = client.education_system
+
+# OpenAI API key
+openai.api_key = os.environ.get('OPENAI_API_KEY')
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return "Flask server is running!"
 
 @app.route('/process', methods=['POST'])
 def process_data():
@@ -35,17 +35,30 @@ def process_data():
         'study_plan': study_plan
     })
 
-    return jsonify({'message': 'Data processed successfully', 'study_plan': study_plan}), 200
-
-@app.route('/get_study_plans', methods=['GET'])
-def get_study_plans():
-    plans = list(db.student_data.find({}, {'_id': 0}))  # Exclude the MongoDB ID
-    return jsonify(plans), 200
+    return jsonify({
+        'message': 'Data processed successfully',
+        'study_plan': study_plan
+    }), 200
 
 def generate_study_plan(score, answers):
     prompt = f"Generate a study plan for a student who scored {score}. The student's answers were: {answers}."
-    generated = generator(prompt, max_length=100, num_return_sequences=1)[0]['generated_text']
-    return generated
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}"
+    }
+    data = {
+        "model": "text-davinci-003",
+        "prompt": prompt,
+        "max_tokens": 150,
+        "temperature": 0.7
+    }
+    response = requests.post("https://api.openai.com/v1/completions", headers=headers, json=data)
+    
+    if response.status_code == 200:
+        study_plan = response.json()['choices'][0]['text'].strip()
+        return study_plan
+    else:
+        return "Error generating study plan"
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
